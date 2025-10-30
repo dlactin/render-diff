@@ -54,7 +54,7 @@ func getRepoRoot() (string, error) {
 func main() {
 	// Define and Parse Flags
 	var valuesFlag valuesArray
-	chartPathFlag := flag.String("chart-path", "", "Path to the chart, relative to the git repository root (required)")
+	chartPathFlag := flag.String("chart-path", "", "Relative path to the chart (required)")
 	gitRefFlag := flag.String("ref", "main", "Target Git ref to compare against (e.g., 'main', 'develop', 'v1.2.0')")
 
 	flag.Var(&valuesFlag, "values", "Path to an additional values file, relative to the chart-path (can be specified multiple times). The chart's 'values.yaml' is always included first.")
@@ -75,27 +75,22 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	log.Printf("Discovered repo root at: %s", repoRoot)
 
-	// We strictly enforce that --chart-path is relative to the repo root.
-	// If a user provides an absolute path, we check if it's within the repo
-	// and calculate the relative path.
-	var relativeChartPath string
-	if filepath.IsAbs(*chartPathFlag) {
-		log.Printf("Absolute chart path provided. Verifying it's inside the repo...")
-		relPath, err := filepath.Rel(repoRoot, *chartPathFlag)
-		if err != nil {
-			log.Fatalf("Failed to calculate relative path for absolute chart-path: %v", err)
-		}
-		if strings.HasPrefix(relPath, "..") {
-			log.Fatalf("Error: The provided absolute --chart-path '%s' is outside the git repository root '%s'.", *chartPathFlag, repoRoot)
-		}
-		relativeChartPath = relPath
-	} else {
-		// Assume relative path is from the repo root
-		relativeChartPath = *chartPathFlag
+	// Get the absolute path from the chart-path flag
+	absChartPath, err := filepath.Abs(*chartPathFlag)
+	if err != nil {
+		log.Fatalf("Failed to resolve absolute chart path for --chart-path %v", err)
 	}
-	log.Printf("Using relative chart path: %s", relativeChartPath)
+
+	// Get the relative path compared to the repoRoot)
+	relativeChartPath, err := filepath.Rel(repoRoot, absChartPath)
+	if err != nil {
+		log.Fatalf("Failed to resolve relative chart path for --chart-path %v", err)
+	}
+
+	if strings.HasPrefix(relativeChartPath, "..") {
+		log.Fatalf("Error: The provided path '%s' (resolves to '%s') is outside the git repository root '%s'.", *chartPathFlag, absChartPath, repoRoot)
+	}
 
 	localChartPath := filepath.Join(repoRoot, relativeChartPath)
 
