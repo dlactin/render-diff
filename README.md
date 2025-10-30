@@ -26,3 +26,9 @@ render-diff is intended to render helm charts stored in a git repository and com
 * ```render-diff -chart-path=cicd-demos/k8s/cicd-demos -values=values-dev.yaml --ref notifications-testing-2```
 #### Checking diff against the main branch
 * ```render-diff -chart-path=cicd-demos/k8s/cicd-demos -values=values-dev.yaml```
+
+
+# TODO
+
+* fix `-chart-path`, we shouldn't use prepend the repository root path if a relative path is provided `./cicd-demos`
+* add `-source-ref`, we could provide a source ref instead of using the current git ref
