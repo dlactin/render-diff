@@ -68,6 +68,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	// A local git installation is required
+	_, err := exec.LookPath("git")
+	if err != nil {
+		log.Fatal("git not found in PATH")
+	}
+
+	if out, err := exec.Command("git", "rev-parse", "--verify", "--quiet", *gitRefFlag).CombinedOutput(); err != nil {
+		log.Fatalf("Invalid --ref %q: %s", *gitRefFlag, strings.TrimSpace(string(out)))
+	}
+
 	log.Printf("Starting Helm chart diff against git ref '%s'", *gitRefFlag)
 
 	// Get Git Root and Define Paths
