@@ -16,7 +16,7 @@ build:
 # Run golangci-lint
 .PHONY: lint
 lint: golangci-lint
-	golangci-lint run
+	$(GOLANGCI_LINT) run
 
 # Run go vet
 .PHONY: vet
