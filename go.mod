@@ -6,7 +6,7 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	helm.sh/helm/v3 v3.18.5
 	sigs.k8s.io/kustomize/api v0.19.0
-	sigs.k8s.io/kustomize/kyaml v0.19.0
+	sigs.k8s.io/kustomize/kyaml v0.20.1
 )
 
 require (
