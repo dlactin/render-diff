@@ -21,12 +21,12 @@ lint: golangci-lint
 # Run go vet
 .PHONY: vet
 vet:
-	go vet
+	go vet ./...
 
 # Run go fmt
 .PHONY: fmt
 fmt:
-	go fmt .
+	go fmt ./...
 
 # Run go tests if they exist
 .PHONY: test

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/dlactin/render-diff/internal/helm"
+	"github.com/dlactin/render-diff/internal/kustomize"
 	"github.com/hexops/gotextdiff" // This is archived, but I could not find a better alternative at the moment
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
@@ -51,7 +52,7 @@ func main() {
 	renderPathFlag := flag.String("path", "", "Relative path to the chart or kustomization directory (required)")
 	gitRefFlag := flag.String("ref", "main", "Target Git ref to compare against (e.g., 'main', 'develop', 'v1.2.0')")
 
-	flag.Var(&valuesFlag, "values", "Path to an additional values file, relative to the chart-path (can be specified multiple times). The chart's 'values.yaml' is always included first.")
+	flag.Var(&valuesFlag, "values", "Path to an additional values file, relative to the path (can be specified multiple times). The chart's 'values.yaml' is always included first.")
 
 	flag.Parse()
 
@@ -98,8 +99,6 @@ func main() {
 
 	localPath := filepath.Join(repoRoot, relativePath)
 
-	// We need to check if a path to a helm chart or kustomize was provided
-
 	// Resolve relative values file paths to absolute paths for the local render
 	// This means we only support values files located in the path provided
 	localValuesPaths := make([]string, len(valuesFlag))
@@ -107,11 +106,8 @@ func main() {
 		localValuesPaths[i] = filepath.Join(localPath, v)
 	}
 
-	// Render Local (Feature Branch) Chart
-	localRender, err := helm.RenderChart(localPath, "release", localValuesPaths)
-	if err != nil {
-		log.Fatalf("Failed to render local chart: %v", err)
-	}
+	// Render Local (Feature Branch) Chart or Kustomization
+	localRender := renderManifests(localPath, localValuesPaths)
 
 	// Set up Git Worktree for Target Ref
 	tempDir, err := os.MkdirTemp("", "diff-ref-")
@@ -153,21 +149,51 @@ func main() {
 		targetValuesPaths[i] = filepath.Join(targetPath, v)
 	}
 
-	// Render Target Ref Chart
-	targetRender, err := helm.RenderChart(targetPath, "release", targetValuesPaths)
-	if err != nil {
-		log.Fatalf("Failed to render '%s' ref chart: %v", *gitRefFlag, err)
-	}
+	// Render Target Ref Chart or Kustomization
+	targetRender := renderManifests(targetPath, targetValuesPaths)
 
 	// Generate and Print Diff
 	diff := createDiff(targetRender, localRender, fmt.Sprintf("%s/%s", *gitRefFlag, relativePath), fmt.Sprintf("local/%s", relativePath))
 
 	if diff == "" {
-		fmt.Println("\nNo differences found between rendered charts.")
+		fmt.Println("\nNo differences found between rendered manifests.")
 	} else {
-		fmt.Printf("\n--- Chart Differences (%s vs. Local) ---\n", *gitRefFlag)
+		fmt.Printf("\n--- Manifest Differences (%s vs. Local) ---\n", *gitRefFlag)
 		fmt.Println(colorizeDiff(diff))
 	}
+}
+
+// isHelmChart will check the path to see if it contains a Chart.yaml file
+// We are assuming the provided path is a kustomize if
+func isHelmChart(path string) bool {
+	chartFile := filepath.Join(path, "Chart.yaml") // Does the provided path have a Chart.yaml file?
+
+	_, err := os.Stat(chartFile)
+	if err == nil {
+		return true
+	} else {
+		return false
+	}
+}
+
+// renderManifests will render a Helm Chart or build a Kustomization
+// and return the rendered manifests as a string
+func renderManifests(path string, values []string) string {
+	var renderedManifests string
+	var err error
+
+	if isHelmChart(path) {
+		renderedManifests, err = helm.RenderChart(path, "release", values)
+		if err != nil {
+			log.Fatalf("Failed to render target chart: '%s'", err)
+		}
+	} else {
+		renderedManifests, err = kustomize.RenderKustomization(path)
+		if err != nil {
+			log.Fatalf("Failed to build target kustomization: '%s'", err)
+		}
+	}
+	return renderedManifests
 }
 
 // createDiff generates a unified diff string between two text inputs.
