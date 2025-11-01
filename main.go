@@ -7,18 +7,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 
+	"github.com/dlactin/render-diff/internal/helm"
+	"github.com/dlactin/render-diff/internal/kustomize"
 	"github.com/hexops/gotextdiff" // This is archived, but I could not find a better alternative at the moment
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/chartutil"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/downloader"
-	"helm.sh/helm/v3/pkg/engine"
-	"helm.sh/helm/v3/pkg/getter"
 )
 
 // ANSI codes for diff colors
@@ -54,16 +49,16 @@ func getRepoRoot() (string, error) {
 func main() {
 	// Define and Parse Flags
 	var valuesFlag valuesArray
-	chartPathFlag := flag.String("chart-path", "", "Relative path to the chart (required)")
+	renderPathFlag := flag.String("path", "", "Relative path to the chart or kustomization directory (required)")
 	gitRefFlag := flag.String("ref", "main", "Target Git ref to compare against (e.g., 'main', 'develop', 'v1.2.0')")
 
-	flag.Var(&valuesFlag, "values", "Path to an additional values file, relative to the chart-path (can be specified multiple times). The chart's 'values.yaml' is always included first.")
+	flag.Var(&valuesFlag, "values", "Path to an additional values file, relative to the path (can be specified multiple times). The chart's 'values.yaml' is always included first.")
 
 	flag.Parse()
 
-	// Chart Path is required
-	if *chartPathFlag == "" {
-		log.Println("Error: --chart-path flag is required.")
+	// Render Path is required
+	if *renderPathFlag == "" {
+		log.Println("Error: --path flag is required.")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -78,7 +73,7 @@ func main() {
 		log.Fatalf("Invalid --ref %q: %s", *gitRefFlag, strings.TrimSpace(string(out)))
 	}
 
-	log.Printf("Starting Helm chart diff against git ref '%s'", *gitRefFlag)
+	log.Printf("Starting diff against git ref '%s'", *gitRefFlag)
 
 	// Get Git Root and Define Paths
 	repoRoot, err := getRepoRoot()
@@ -86,36 +81,33 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	// Get the absolute path from the chart-path flag
-	absChartPath, err := filepath.Abs(*chartPathFlag)
+	// Get the absolute path from the path flag
+	absPath, err := filepath.Abs(*renderPathFlag)
 	if err != nil {
-		log.Fatalf("Failed to resolve absolute chart path for --chart-path %v", err)
+		log.Fatalf("Failed to resolve absolute path for -path %v", err)
 	}
 
 	// Get the relative path compared to the repoRoot)
-	relativeChartPath, err := filepath.Rel(repoRoot, absChartPath)
+	relativePath, err := filepath.Rel(repoRoot, absPath)
 	if err != nil {
-		log.Fatalf("Failed to resolve relative chart path for --chart-path %v", err)
+		log.Fatalf("Failed to resolve relative path for -path %v", err)
 	}
 
-	if strings.HasPrefix(relativeChartPath, "..") {
-		log.Fatalf("Error: The provided path '%s' (resolves to '%s') is outside the git repository root '%s'.", *chartPathFlag, absChartPath, repoRoot)
+	if strings.HasPrefix(relativePath, "..") {
+		log.Fatalf("Error: The provided path '%s' (resolves to '%s') is outside the git repository root '%s'.", *renderPathFlag, absPath, repoRoot)
 	}
 
-	localChartPath := filepath.Join(repoRoot, relativeChartPath)
+	localPath := filepath.Join(repoRoot, relativePath)
 
 	// Resolve relative values file paths to absolute paths for the local render
-	// This means we only support values files located in the chart path provided
+	// This means we only support values files located in the path provided
 	localValuesPaths := make([]string, len(valuesFlag))
 	for i, v := range valuesFlag {
-		localValuesPaths[i] = filepath.Join(localChartPath, v)
+		localValuesPaths[i] = filepath.Join(localPath, v)
 	}
 
-	// Render Local (Feature Branch) Chart
-	localRender, err := renderChart(localChartPath, "release", localValuesPaths)
-	if err != nil {
-		log.Fatalf("Failed to render local chart: %v", err)
-	}
+	// Render Local (Feature Branch) Chart or Kustomization
+	localRender := renderManifests(localPath, localValuesPaths)
 
 	// Set up Git Worktree for Target Ref
 	tempDir, err := os.MkdirTemp("", "diff-ref-")
@@ -149,141 +141,59 @@ func main() {
 		log.Fatalf("Failed to create worktree for '%s': %v\nOutput: %s", *gitRefFlag, err, string(output))
 	}
 
-	// Render Target Ref Chart
-	targetChartPath := filepath.Join(tempDir, relativeChartPath)
+	targetPath := filepath.Join(tempDir, relativePath)
 
 	// Resolve values file paths for the worktree
 	targetValuesPaths := make([]string, len(valuesFlag))
 	for i, v := range valuesFlag {
-		targetValuesPaths[i] = filepath.Join(targetChartPath, v)
+		targetValuesPaths[i] = filepath.Join(targetPath, v)
 	}
 
-	targetRender, err := renderChart(targetChartPath, "release", targetValuesPaths)
-	if err != nil {
-		log.Fatalf("Failed to render '%s' ref chart: %v", *gitRefFlag, err)
-	}
+	// Render Target Ref Chart or Kustomization
+	targetRender := renderManifests(targetPath, targetValuesPaths)
 
 	// Generate and Print Diff
-	diff := createDiff(targetRender, localRender, fmt.Sprintf("%s/%s", *gitRefFlag, relativeChartPath), fmt.Sprintf("local/%s", relativeChartPath))
+	diff := createDiff(targetRender, localRender, fmt.Sprintf("%s/%s", *gitRefFlag, relativePath), fmt.Sprintf("local/%s", relativePath))
 
 	if diff == "" {
-		fmt.Println("\nNo differences found between rendered charts.")
+		fmt.Println("\nNo differences found between rendered manifests.")
 	} else {
-		fmt.Printf("\n--- Chart Differences (%s vs. Local) ---\n", *gitRefFlag)
+		fmt.Printf("\n--- Manifest Differences (%s vs. Local) ---\n", *gitRefFlag)
 		fmt.Println(colorizeDiff(diff))
 	}
 }
 
-// loadValues merges multiple values files in order, mimicking 'helm -f file1 -f file2'
-func loadValues(valuesFiles []string) (chartutil.Values, error) {
-	mergedValues := chartutil.Values{}
+// isHelmChart will check the path to see if it contains a Chart.yaml file
+// We are assuming the provided path is a kustomize if
+func isHelmChart(path string) bool {
+	chartFile := filepath.Join(path, "Chart.yaml") // Does the provided path have a Chart.yaml file?
 
-	for _, path := range valuesFiles {
-		// Check if file exists. It's not an error if a values file is missing
-		// in one branch but not the other; Helm just skips it.
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			log.Printf("Warning: values file '%s' not found, skipping.", path)
-			continue
-		}
-
-		currentValues, err := chartutil.ReadValuesFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read values file %s: %w", path, err)
-		}
-
-		// Coalesce merges the two maps, with 'currentValues' overwriting 'mergedValues'
-		// This matches Helm, later values files override earlier ones. 'helm -f file1 -f file2'
-		mergedValues = chartutil.CoalesceTables(currentValues, mergedValues)
+	_, err := os.Stat(chartFile)
+	if err == nil {
+		return true
+	} else {
+		return false
 	}
-	return mergedValues, nil
 }
 
-// renderChart loads, merges values, and renders a Helm chart
-func renderChart(chartPath, releaseName string, valuesFiles []string) (string, error) {
-	chart, err := loader.Load(chartPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to load chart from %s: %w", chartPath, err)
-	}
+// renderManifests will render a Helm Chart or build a Kustomization
+// and return the rendered manifests as a string
+func renderManifests(path string, values []string) string {
+	var renderedManifests string
+	var err error
 
-	// Helm Dependency Build
-	// Run 'helm dependency build' if dependencies are present
-	if chart.Metadata.Dependencies != nil {
-		log.Printf("Chart has dependencies, running 'helm dependency build' for: %s", chartPath)
-
-		// We need a basic cli.EnvSettings to init the getter.Providers.
-		settings := cli.New()
-		getters := getter.All(settings)
-
-		// Create a downloader manager.
-		man := downloader.Manager{
-			Out:       log.Writer(),
-			ChartPath: chartPath,
-			Getters:   getters,
-		}
-
-		// Run build. This downloads charts into the 'charts/' directory.
-		if err := man.Build(); err != nil {
-			return "", fmt.Errorf("failed to run dependency build: %w", err)
-		}
-
-		// Reload the chart after building dependencies
-		// This ensures the newly downloaded subcharts are included in the render.
-		chart, err = loader.Load(chartPath)
+	if isHelmChart(path) {
+		renderedManifests, err = helm.RenderChart(path, "release", values)
 		if err != nil {
-			return "", fmt.Errorf("failed to reload chart after dependency build: %w", err)
+			log.Fatalf("Failed to render target chart: '%s'", err)
+		}
+	} else {
+		renderedManifests, err = kustomize.RenderKustomization(path)
+		if err != nil {
+			log.Fatalf("Failed to build target kustomization: '%s'", err)
 		}
 	}
-
-	// Load additional values files from the --values flags
-	userValues, err := loadValues(valuesFiles)
-	if err != nil {
-		return "", fmt.Errorf("failed to load/merge values: %w", err)
-	}
-
-	// Define release options for the render
-	options := chartutil.ReleaseOptions{
-		Name:      releaseName, // We don't need a real releaseName or namespace for the diff
-		Namespace: "default",
-		Revision:  1,
-		IsInstall: true,
-	}
-
-	// Get render values. This merges the chart's default values (from chart.Values/values.yaml)
-	// with the user-supplied values (from userValues).
-	renderVals, err := chartutil.ToRenderValues(chart, userValues, options, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to prepare render values: %w", err)
-	}
-
-	// Render the chart
-	renderedTemplates, err := engine.Render(chart, renderVals)
-	if err != nil {
-		return "", fmt.Errorf("failed to render chart: %w", err)
-	}
-
-	// Concatenate all rendered templates into a single string for easier diffing
-	var builder strings.Builder
-	keys := make([]string, 0, len(renderedTemplates))
-	for k := range renderedTemplates {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		content := renderedTemplates[key]
-		// Skip empty templates, partials, or NOTES.txt
-		if strings.TrimSpace(content) == "" ||
-			strings.HasSuffix(key, ".tpl") ||
-			strings.HasSuffix(key, "NOTES.txt") {
-			continue
-		}
-		builder.WriteString("---\n")
-		builder.WriteString(fmt.Sprintf("# Source: %s\n", key))
-		builder.WriteString(content)
-		builder.WriteString("\n")
-	}
-
-	return builder.String(), nil
+	return renderedManifests
 }
 
 // createDiff generates a unified diff string between two text inputs.
