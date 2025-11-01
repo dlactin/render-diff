@@ -5,8 +5,8 @@ go 1.24.0
 require (
 	github.com/hexops/gotextdiff v1.0.3
 	helm.sh/helm/v3 v3.18.5
-	sigs.k8s.io/kustomize/api v0.19.0
-	sigs.k8s.io/kustomize/kyaml v0.19.0
+	sigs.k8s.io/kustomize/api v0.20.1
+	sigs.k8s.io/kustomize/kyaml v0.20.1
 )
 
 require (
@@ -39,7 +39,6 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
