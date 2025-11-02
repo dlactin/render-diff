@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 
 	"github.com/dlactin/render-diff/internal/helm"
@@ -36,6 +37,21 @@ func (i *valuesArray) Set(value string) error {
 	return nil
 }
 
+// printVersion prints the application version
+func printVersion() {
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		fmt.Println("Unable to determine version information.")
+		return
+	}
+
+	if buildInfo.Main.Version != "" {
+		fmt.Printf("Version: %s\n", buildInfo.Main.Version)
+	} else {
+		fmt.Println("Version: unknown")
+	}
+}
+
 // getRepoRoot finds the top-level directory of the current git repository.
 func getRepoRoot() (string, error) {
 	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
@@ -49,12 +65,18 @@ func getRepoRoot() (string, error) {
 func main() {
 	// Define and Parse Flags
 	var valuesFlag valuesArray
-	renderPathFlag := flag.String("path", "", "Relative path to the chart or kustomization directory (required)")
-	gitRefFlag := flag.String("ref", "main", "Target Git ref to compare against (e.g., 'main', 'develop', 'v1.2.0')")
-
+	renderPathFlag := flag.String("path", "", "Relative path to the chart or kustomization directory (required).")
+	gitRefFlag := flag.String("ref", "main", "Target Git ref to compare against (e.g., 'main', 'develop', 'v1.2.0').")
+	versionFlag := flag.Bool("version", false, "Prints current application version.")
 	flag.Var(&valuesFlag, "values", "Path to an additional values file, relative to the path (can be specified multiple times). The chart's 'values.yaml' is always included first.")
 
 	flag.Parse()
+
+	// Print the application version and exist
+	if *versionFlag {
+		printVersion()
+		os.Exit(0)
+	}
 
 	// Render Path is required
 	if *renderPathFlag == "" {
