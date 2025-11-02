@@ -8,7 +8,7 @@ import (
 )
 
 // RenderKustomization runs 'kustomize build' on a given path and returns the
-// redered manifests.
+// rendered manifests.
 func RenderKustomization(kustomizePath string) (string, error) {
 	opts := krusty.MakeDefaultOptions()
 	opts.PluginConfig.HelmConfig.Enabled = false
@@ -32,4 +32,15 @@ func RenderKustomization(kustomizePath string) (string, error) {
 
 	// Return as a string, ready for diffing
 	return string(yamlBytes), nil
+}
+
+func IsKustomize(path string) bool {
+	opts := krusty.MakeDefaultOptions()
+	opts.PluginConfig.HelmConfig.Enabled = false
+
+	fSys := filesys.MakeFsOnDisk()
+	k := krusty.MakeKustomizer(opts)
+
+	_, err := k.Run(fSys, path)
+	return err == nil
 }

@@ -163,37 +163,27 @@ func main() {
 	}
 }
 
-// isHelmChart will check the path to see if it contains a Chart.yaml file
-// We are assuming the provided path is a kustomize if
-func isHelmChart(path string) bool {
-	chartFile := filepath.Join(path, "Chart.yaml") // Does the provided path have a Chart.yaml file?
-
-	_, err := os.Stat(chartFile)
-	if err == nil {
-		return true
-	} else {
-		return false
-	}
-}
-
 // renderManifests will render a Helm Chart or build a Kustomization
 // and return the rendered manifests as a string
 func renderManifests(path string, values []string) string {
 	var renderedManifests string
 	var err error
 
-	if isHelmChart(path) {
+	if helm.IsHelmChart(path) {
 		renderedManifests, err = helm.RenderChart(path, "release", values)
 		if err != nil {
-			log.Fatalf("Failed to render target chart: '%s'", err)
+			log.Fatalf("Failed to render target Chart: '%s'", err)
 		}
-	} else {
+		return renderedManifests
+	} else if kustomize.IsKustomize(path) {
 		renderedManifests, err = kustomize.RenderKustomization(path)
 		if err != nil {
-			log.Fatalf("Failed to build target kustomization: '%s'", err)
+			log.Fatalf("Failed to build target Kustomization: '%s'", err)
 		}
+		return renderedManifests
 	}
-	return renderedManifests
+	log.Fatalf("Target path is not a valid Helm Chart or Kustomization. Path may not exist in Target Ref.")
+	return ""
 }
 
 // createDiff generates a unified diff string between two text inputs.

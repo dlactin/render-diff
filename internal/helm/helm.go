@@ -127,3 +127,9 @@ func loadValues(valuesFiles []string) (chartutil.Values, error) {
 	}
 	return mergedValues, nil
 }
+
+// IsHelmChart will try to load the path as a Helm Chart, if it fails we'll return false
+func IsHelmChart(path string) bool {
+	_, err := loader.Load(path)
+	return err == nil
+}
