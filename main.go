@@ -129,7 +129,10 @@ func main() {
 	}
 
 	// Render Local (Feature Branch) Chart or Kustomization
-	localRender := renderManifests(localPath, localValuesPaths)
+	localRender, err := renderManifests(localPath, localValuesPaths)
+	if err != nil {
+		log.Fatalf("Failed to render path in local ref: %v", err)
+	}
 
 	// Set up Git Worktree for Target Ref
 	tempDir, err := os.MkdirTemp("", "diff-ref-")
@@ -171,8 +174,18 @@ func main() {
 		targetValuesPaths[i] = filepath.Join(targetPath, v)
 	}
 
-	// Render Target Ref Chart or Kustomization
-	targetRender := renderManifests(targetPath, targetValuesPaths)
+	// Render target Ref Chart or Kustomization
+	targetRender, err := renderManifests(targetPath, targetValuesPaths)
+	if err != nil {
+		// If the path does not exist in the target ref
+		// We can assume it's a new addition and diff against
+		// an empty string instead.
+		if os.IsNotExist(err) {
+			targetRender = ""
+		} else {
+			log.Fatalf("Failed to render target ref manifests: %v", err)
+		}
+	}
 
 	// Generate and Print Diff
 	diff := createDiff(targetRender, localRender, fmt.Sprintf("%s/%s", *gitRefFlag, relativePath), fmt.Sprintf("local/%s", relativePath))
@@ -187,25 +200,25 @@ func main() {
 
 // renderManifests will render a Helm Chart or build a Kustomization
 // and return the rendered manifests as a string
-func renderManifests(path string, values []string) string {
+func renderManifests(path string, values []string) (string, error) {
 	var renderedManifests string
 	var err error
 
 	if helm.IsHelmChart(path) {
 		renderedManifests, err = helm.RenderChart(path, "release", values)
 		if err != nil {
-			log.Fatalf("Failed to render target Chart: '%s'", err)
+			return "", fmt.Errorf("failed to render target Chart: '%s'", err)
 		}
-		return renderedManifests
+		return renderedManifests, nil
 	} else if kustomize.IsKustomize(path) {
 		renderedManifests, err = kustomize.RenderKustomization(path)
 		if err != nil {
-			log.Fatalf("Failed to build target Kustomization: '%s'", err)
+			return "", fmt.Errorf("failed to build target Kustomization: '%s'", err)
 		}
-		return renderedManifests
+		return renderedManifests, nil
 	}
-	log.Fatalf("Target path is not a valid Helm Chart or Kustomization. Path may not exist in Target Ref.")
-	return ""
+
+	return "", fmt.Errorf("path: %s is not a valid Helm Chart or Kustomization", path)
 }
 
 // createDiff generates a unified diff string between two text inputs.
