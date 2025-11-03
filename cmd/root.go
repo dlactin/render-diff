@@ -15,11 +15,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Flag vars
+// Package vars
+// Includes flag vars and some set during PreRun
 var (
 	valuesFlag     []string
 	renderPathFlag string
 	gitRefFlag     string
+
+	repoRoot string
+	fullRef  string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -30,16 +34,8 @@ var rootCmd = &cobra.Command{
 
 It renders your local Helm chart or Kustomize overlay to compare the resulting manifests against the version in a target git ref (like 'main' or 'develop'). It prints a colored diff of the final rendered YAML.`,
 	Version: getVersion(),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	PreRunE: func(cmd *cobra.Command, args []string) error {
 		log.SetFlags(0) // Disabling timestamps for log output
-
-		// If the user just provides a simple name like "main",
-		// we will assume they mean the remote version.
-		fullRef := gitRefFlag
-		if !strings.Contains(gitRefFlag, "/") && gitRefFlag != "HEAD" {
-			fullRef = "origin/" + gitRefFlag
-			log.Printf("No remote specified for ref, assuming '%s'", fullRef)
-		}
 
 		// A local git installation is required
 		_, err := exec.LookPath("git")
@@ -47,18 +43,39 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 			return fmt.Errorf("git not found in PATH: %w", err)
 		}
 
-		if out, err := exec.Command("git", "rev-parse", "--verify", "--quiet", fullRef).CombinedOutput(); err != nil {
-			return fmt.Errorf("invalid --ref %q: %s", fullRef, strings.TrimSpace(string(out)))
-		}
-
-		log.Printf("Starting diff against git ref '%s':\n", fullRef)
-
-		// Get Git Root and Define Paths
-		repoRoot, err := diff.GetRepoRoot()
+		// Get Git repository root
+		repoRoot, err = diff.GetRepoRoot()
 		if err != nil {
-			fmt.Println(err.Error())
 			return err
 		}
+
+		// Try to find the upstream for our target ref
+		upstreamRef := exec.Command("git", "rev-parse", "--abbrev-ref", gitRefFlag+"@{u}")
+		upstreamRef.Dir = repoRoot
+
+		output, err := upstreamRef.CombinedOutput()
+		if err == nil {
+			fullRef = strings.TrimSpace(string(output))
+			log.Printf("Found upstream for '%s', using '%s'", gitRefFlag, fullRef)
+		} else {
+			fullRef = gitRefFlag
+			log.Printf("No upstream found for '%s', using local ref", fullRef)
+		}
+
+		// Validate
+		validateRef := exec.Command("git", "rev-parse", "--verify", "--quiet", fullRef)
+		validateRef.Dir = repoRoot
+
+		if out, err := validateRef.CombinedOutput(); err != nil {
+			return fmt.Errorf("invalid or non-existent ref %q: %s", fullRef, strings.TrimSpace(string(out)))
+		}
+
+		return nil
+	},
+
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		log.Printf("Starting diff against git ref '%s':\n", fullRef)
 
 		// Get the absolute path from the path flag
 		absPath, err := filepath.Abs(renderPathFlag)
@@ -125,7 +142,7 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 		if renderedDiff == "" {
 			fmt.Println("\nNo differences found between rendered manifests.")
 		} else {
-			fmt.Printf("\n--- Manifest Differences (%s vs. Local) ---\n", fullRef)
+			fmt.Printf("\n--- Diff (%s vs. local) ---\n", fullRef)
 			fmt.Println(diff.ColorizeDiff(renderedDiff))
 		}
 
