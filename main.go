@@ -207,18 +207,18 @@ func renderManifests(path string, values []string) (string, error) {
 	if helm.IsHelmChart(path) {
 		renderedManifests, err = helm.RenderChart(path, "release", values)
 		if err != nil {
-			return "", fmt.Errorf("Failed to render target Chart: '%s'", err)
+			return "", fmt.Errorf("failed to render target Chart: '%s'", err)
 		}
 		return renderedManifests, nil
 	} else if kustomize.IsKustomize(path) {
 		renderedManifests, err = kustomize.RenderKustomization(path)
 		if err != nil {
-			fmt.Errorf("Failed to build target Kustomization: '%s'", err)
+			return "", fmt.Errorf("failed to build target Kustomization: '%s'", err)
 		}
 		return renderedManifests, nil
 	}
 
-	return "", fmt.Errorf("path: %s is not a valid Helm Chart or Kustomization.", path)
+	return "", fmt.Errorf("path: %s is not a valid Helm Chart or Kustomization", path)
 }
 
 // createDiff generates a unified diff string between two text inputs.
