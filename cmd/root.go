@@ -136,14 +136,9 @@ func Execute() {
 }
 
 // Initializes our RootCmd with the flags below.
-// Path is the only required flag, values files only used for Helm paths
+// Defaults to current working directory if path is not set
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&renderPathFlag, "path", "p", "", "Relative path to the chart or kustomization directory (required)")
+	rootCmd.PersistentFlags().StringVarP(&renderPathFlag, "path", "p", ".", "Relative path to the chart or kustomization directory")
 	rootCmd.PersistentFlags().StringVarP(&gitRefFlag, "ref", "r", "main", "Target Git ref to compare against")
 	rootCmd.PersistentFlags().StringSliceVarP(&valuesFlag, "values", "v", []string{}, "Path to an additional values file (can be specified multiple times)")
-
-	err := rootCmd.MarkPersistentFlagRequired("path")
-	if err != nil {
-		panic(err)
-	}
 }
