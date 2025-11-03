@@ -1,3 +1,5 @@
+// Package kustomize provides functions to build kustomizations,
+// and check if the provided path contains kustomizations
 package kustomize
 
 import (
@@ -7,8 +9,8 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
-// RenderKustomization runs 'kustomize build' on a given path and returns the
-// rendered manifests.
+// RenderKustomization runs 'kustomize build' on a given path and
+// returns the rendered manifests.
 func RenderKustomization(kustomizePath string) (string, error) {
 	opts := krusty.MakeDefaultOptions()
 	opts.PluginConfig.HelmConfig.Enabled = false
