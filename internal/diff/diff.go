@@ -1,3 +1,4 @@
+// Package diff provides functions for comparing rendered manifests
 package diff
 
 import (

@@ -1,4 +1,6 @@
-// renderChart loads, merges values, and renders a Helm chart
+// Package helm provides functions to render helm charts,
+// load multiple values files provided as a cli flag and
+// check if the provided path is a helm chart
 package helm
 
 import (
@@ -16,6 +18,7 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 )
 
+// renderChart loads, merges values, and renders a Helm chart
 func RenderChart(chartPath, releaseName string, valuesFiles []string) (string, error) {
 	chart, err := loader.Load(chartPath)
 	if err != nil {

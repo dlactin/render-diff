@@ -1,3 +1,5 @@
+// Package cmd implements the command-line interface for render-diff
+// using the Cobra library.
 package cmd
 
 import (
@@ -6,12 +8,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 
 	"github.com/dlactin/render-diff/internal/diff"
+	"github.com/dlactin/render-diff/internal/git"
 	"github.com/spf13/cobra"
-	// This is archived, but I could not find a better alternative at the moment
 )
 
 // Flag vars
@@ -82,37 +83,12 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 			return fmt.Errorf("failed to render path in local ref: %v", err)
 		}
 
-		// Set up Git Worktree for Target Ref
-		tempDir, err := os.MkdirTemp("", "diff-ref-")
+		tempDir, cleanup, err := git.SetupWorkTree(repoRoot, gitRefFlag)
 		if err != nil {
-			return fmt.Errorf("failed to create temp directory: %v", err)
+			return err
 		}
-
-		// Defer LIFO: 1. Remove dir (runs 2nd), 2. Remove worktree (runs 1st)
-		// Clean up temp directories before our diff is returned
-		defer func() {
-			if err := os.RemoveAll(tempDir); err != nil {
-				fmt.Printf("error removing temporary directory %s: %v\n", tempDir, err)
-			}
-		}()
-
-		defer func() {
-			// Using --force to avoid errors if dir is already partially cleaned
-			cleanupCmd := exec.Command("git", "worktree", "remove", "--force", tempDir)
-			cleanupCmd.Dir = repoRoot // Run from the repo root
-			if output, err := cleanupCmd.CombinedOutput(); err != nil {
-				// print a warning
-				log.Printf("Warning: failed to run 'git worktree remove'. Manual cleanup may be required. Error: %v, Output: %s", err, string(output))
-			}
-		}()
-
-		// Create the worktree
-		// Using -d to allow checking out a branch that is already checked out (like 'main')
-		addCmd := exec.Command("git", "worktree", "add", "-d", tempDir, gitRefFlag)
-		addCmd.Dir = repoRoot // Run from the repo root
-		if output, err := addCmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("failed to create worktree for '%s': %v\nOutput: %s", gitRefFlag, err, string(output))
-		}
+		// We want this to run after wwe have generated our diffs
+		defer cleanup()
 
 		targetPath := filepath.Join(tempDir, relativePath)
 
@@ -169,15 +145,5 @@ func init() {
 	err := rootCmd.MarkPersistentFlagRequired("path")
 	if err != nil {
 		panic(err)
-	}
-}
-
-// getVersion return the application version
-func getVersion() string {
-	buildInfo, ok := debug.ReadBuildInfo()
-	if !ok || buildInfo.Main.Version == "" {
-		return "development"
-	} else {
-		return buildInfo.Main.Version
 	}
 }
