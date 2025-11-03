@@ -9,6 +9,14 @@ import (
 )
 
 func SetupWorkTree(repoRoot, gitRef string) (string, func(), error) {
+
+	// Fetch from all remotes
+	fetchCmd := exec.Command("git", "fetch", "--all")
+	fetchCmd.Dir = repoRoot
+	if output, err := fetchCmd.CombinedOutput(); err != nil {
+		return "", nil, fmt.Errorf("failed to run 'git fetch --all': %w\nOutput: %s", err, string(output))
+	}
+
 	// Set up a Git Worktree for gitref
 	tempDir, err := os.MkdirTemp("", "diff-ref-")
 	if err != nil {
