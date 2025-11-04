@@ -44,7 +44,6 @@ func RenderManifests(path string, values []string, debug bool) (string, error) {
 		}
 		return renderedManifests, nil
 	} else if kustomize.IsKustomize(path) {
-		fmt.Println("Checking kustomize")
 		renderedManifests, err = kustomize.RenderKustomization(path)
 		if err != nil {
 			return "", fmt.Errorf("failed to build target Kustomization: '%s'", err)
