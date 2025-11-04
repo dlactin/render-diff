@@ -171,17 +171,15 @@ func loadChart(path string, debug bool) (*chart.Chart, error) {
 // updating dependencies. Use the --debug flag to have full logging.
 func silentRun(debug bool, fn func() error) error {
 	if debug {
-		// If debug is on, run the provided function
 		return fn()
 	}
 
-	// If debug is off, silence the global logger.
+	// If debug is off, silence the global logger
 	currentLogger := log.Writer()
 	log.SetOutput(io.Discard)
 
 	// Defer the restore
 	defer log.SetOutput(currentLogger)
 
-	// Run the provided function
 	return fn()
 }
