@@ -21,6 +21,7 @@ var (
 	valuesFlag     []string
 	renderPathFlag string
 	gitRefFlag     string
+	debugFlag      bool
 
 	repoRoot string
 	fullRef  string
@@ -56,7 +57,9 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 		output, err := upstreamRef.CombinedOutput()
 		if err == nil {
 			fullRef = strings.TrimSpace(string(output))
-			log.Printf("Found upstream for '%s', using '%s'", gitRefFlag, fullRef)
+			if debugFlag {
+				log.Printf("Found upstream for '%s', using '%s'", gitRefFlag, fullRef)
+			}
 		} else {
 			fullRef = gitRefFlag
 			log.Printf("No upstream found for '%s', using local ref", fullRef)
@@ -103,7 +106,7 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 		}
 
 		// Render Local (Feature Branch) Chart or Kustomization
-		localRender, err := diff.RenderManifests(localPath, localValuesPaths)
+		localRender, err := diff.RenderManifests(localPath, localValuesPaths, debugFlag)
 		if err != nil {
 			return fmt.Errorf("failed to render path in local ref: %v", err)
 		}
@@ -124,7 +127,7 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 		}
 
 		// Render target Ref Chart or Kustomization
-		targetRender, err := diff.RenderManifests(targetPath, targetValuesPaths)
+		targetRender, err := diff.RenderManifests(targetPath, targetValuesPaths, debugFlag)
 		if err != nil {
 			// If the path does not exist in the target ref
 			// We can assume it's a new addition and diff against
@@ -166,4 +169,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&renderPathFlag, "path", "p", ".", "Relative path to the chart or kustomization directory")
 	rootCmd.PersistentFlags().StringVarP(&gitRefFlag, "ref", "r", "main", "Target Git ref to compare against with optional remote. Remote will default to 'origin' if not specified (origin/main)")
 	rootCmd.PersistentFlags().StringSliceVarP(&valuesFlag, "values", "v", []string{}, "Path to an additional values file (can be specified multiple times)")
+	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "Enable verbose logging for debugging")
+
+	rootCmd.Flags().SortFlags = false
+	rootCmd.PersistentFlags().SortFlags = false
 }
