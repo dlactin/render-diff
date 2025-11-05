@@ -40,13 +40,13 @@ func RenderManifests(path string, values []string, debug bool) (string, error) {
 	if helm.IsHelmChart(path) {
 		renderedManifests, err = helm.RenderChart(path, "release", values, debug)
 		if err != nil {
-			return "", fmt.Errorf("failed to render target Chart: '%s'", err)
+			return "", fmt.Errorf("failed to render target Chart: '%w'", err)
 		}
 		return renderedManifests, nil
 	} else if kustomize.IsKustomize(path) {
 		renderedManifests, err = kustomize.RenderKustomization(path)
 		if err != nil {
-			return "", fmt.Errorf("failed to build target Kustomization: '%s'", err)
+			return "", fmt.Errorf("failed to build target Kustomization: '%w'", err)
 		}
 		return renderedManifests, nil
 	}

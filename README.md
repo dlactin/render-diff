@@ -21,8 +21,8 @@ go install github.com/dlactin/render-diff@latest
 
 | Flag | Shorthand | Description | Default |
 | :--- | :--- | :--- | :--- |
-| `--path` | `-p` | **(Required)** Relative path to the chart or kustomization directory. | `.` |
-| `--ref` | `-r` | Target Git ref to compare against. | `main` |
+| `--path` | `-p` | Relative path to the chart or kustomization directory. | `.` |
+| `--ref` | `-r` | Target Git ref to compare against. Will try to find its remote-tracking branch (e.g., origin/main). | `main` |
 | `--values` | `-f` | Path to an additional values file (can be specified multiple times). | `[]` |
 | `--debug` | `-d` | Enable verbose logging for debugging | `false` |
 | `--version` | | Prints the application version. | |
