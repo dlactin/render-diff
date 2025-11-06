@@ -33,8 +33,8 @@ go install github.com/dlactin/render-diff@latest
 ### This must be run while your current directory is within your git repository
 
 #### Checking a Helm Chart diff against another target ref
-* ```render-diff -path ./examples/helm/helloWorld -values values-dev.yaml --ref development```
+* ```render-diff -p ./examples/helm/helloWorld -f values-dev.yaml -r development```
 #### Checking Kustomize diff against the default (`main`) branch
-* ```render-diff -path ./examples/kustomize/helloWorld```
+* ```render-diff -p ./examples/kustomize/helloWorld```
 #### Checking Kustomize diff against a tag
 * ```render-diff -p ./examples/kustomize/helloWorld -r tags/v0.5.1```
