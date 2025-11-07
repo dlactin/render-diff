@@ -13,12 +13,12 @@ func TestIsKustomize(t *testing.T) {
 	}{
 		{
 			name: "Valid Kustomize directory",
-			path: "../../examples/kustomize/helloWorld",
+			path: "../../examples/kustomize/helloworld",
 			want: true,
 		},
 		{
 			name: "Helm directory (should be false)",
-			path: "../../examples/helm/helloWorld",
+			path: "../../examples/helm/helloworld",
 			want: false,
 		},
 		{
@@ -40,7 +40,7 @@ func TestIsKustomize(t *testing.T) {
 
 func TestRenderKustomization(t *testing.T) {
 	t.Run("Renders a valid kustomization", func(t *testing.T) {
-		path := "../../examples/kustomize/helloWorld"
+		path := "../../examples/kustomize/helloworld"
 
 		output, err := RenderKustomization(path)
 		if err != nil {
@@ -66,7 +66,7 @@ func TestRenderKustomization(t *testing.T) {
 
 	t.Run("Fails on an invalid path", func(t *testing.T) {
 		// This is a Helm chart, not kustomization
-		path := "../../examples/helm/helloWorld"
+		path := "../../examples/helm/helloworld"
 
 		_, err := RenderKustomization(path)
 		if err == nil {

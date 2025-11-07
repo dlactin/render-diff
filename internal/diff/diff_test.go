@@ -34,7 +34,7 @@ func TestRenderManifests(t *testing.T) {
 	}{
 		{
 			name:        "Renders Helm chart",
-			path:        "../../examples/helm/helloWorld",
+			path:        "../../examples/helm/helloworld",
 			debug:       false,
 			values:      nil,
 			wantContent: "kind: ConfigMap",
@@ -42,15 +42,15 @@ func TestRenderManifests(t *testing.T) {
 		},
 		{
 			name:        "Renders Helm chart with values",
-			path:        "../../examples/helm/helloWorld",
+			path:        "../../examples/helm/helloworld",
 			debug:       false,
-			values:      []string{"../../examples/helm/helloWorld/values-dev.yaml"},
+			values:      []string{"../../examples/helm/helloworld/values-dev.yaml"},
 			wantContent: "nginx:dev",
 			wantErr:     false,
 		},
 		{
 			name:        "Renders Kustomize project",
-			path:        "../../examples/kustomize/helloWorld",
+			path:        "../../examples/kustomize/helloworld",
 			debug:       false,
 			values:      nil,
 			wantContent: "kind: ConfigMap",

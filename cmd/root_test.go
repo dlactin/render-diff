@@ -64,7 +64,7 @@ func executeCommand(ctx context.Context, args ...string) (stdout, stderr string,
 func TestRootCmd(t *testing.T) {
 
 	t.Run("Success path with Helm chart", func(t *testing.T) {
-		path := "./examples/helm/helloWorld"
+		path := "./examples/helm/helloworld"
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Skipf("Skipping test, example path not found: %s", path)
 		}
