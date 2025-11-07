@@ -14,7 +14,7 @@ import (
 func resetFlags() {
 	// Reset to default values from init()
 	renderPathFlag = "."
-	gitRefFlag = "main"
+	gitRefFlag = "HEAD"
 	valuesFlag = []string{}
 	debugFlag = false
 
@@ -76,11 +76,11 @@ func TestRootCmd(t *testing.T) {
 			t.Fatalf("Command failed unexpectedly: %v\nStderr: %s", err, stderr)
 		}
 
-		if !strings.Contains(stderr, "Starting diff against git ref 'main'") {
+		if !strings.Contains(stderr, "Starting diff against git ref 'HEAD'") {
 			t.Errorf("Expected log message in stderr, got: %s", stderr)
 		}
 
-		if !strings.Contains(stdout, "--- Diff (main vs. local) ---") {
+		if !strings.Contains(stdout, "--- Diff ---") {
 			t.Errorf("Expected diff output in stdout, got: %s", stdout)
 		}
 	})

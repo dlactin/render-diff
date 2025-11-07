@@ -11,7 +11,7 @@ func TestSetupWorkTree(t *testing.T) {
 	repoRoot, _ := diff.GetRepoRoot()
 
 	t.Run("Success with valid ref", func(t *testing.T) {
-		gitRef := "main"
+		gitRef := "HEAD"
 
 		tempDir, cleanup, err := SetupWorkTree(repoRoot, gitRef)
 		if err != nil {
