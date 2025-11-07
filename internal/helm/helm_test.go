@@ -13,12 +13,12 @@ func TestIsHelmChart(t *testing.T) {
 	}{
 		{
 			name: "Valid Helm chart from examples",
-			path: "../../examples/helm/helloWorld",
+			path: "../../examples/helm/helloworld",
 			want: true,
 		},
 		{
 			name: "Kustomize directory (should be false)",
-			path: "../../examples/kustomize/helloWorld",
+			path: "../../examples/kustomize/helloworld",
 			want: false,
 		},
 		{
@@ -40,7 +40,7 @@ func TestIsHelmChart(t *testing.T) {
 
 func TestRenderChart(t *testing.T) {
 	// Using our example helm chart
-	chartPath := "../../examples/helm/helloWorld"
+	chartPath := "../../examples/helm/helloworld"
 	releaseName := "test-release"
 
 	t.Run("Render with default values", func(t *testing.T) {
@@ -71,7 +71,7 @@ func TestRenderChart(t *testing.T) {
 
 	t.Run("Render with override values", func(t *testing.T) {
 		// Using dev values file
-		valuesFile := "../../examples/helm/helloWorld/values-dev.yaml"
+		valuesFile := "../../examples/helm/helloworld/values-dev.yaml"
 
 		valuesFiles := []string{valuesFile}
 		debug := false // Test the silent path

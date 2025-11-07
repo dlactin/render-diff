@@ -16,6 +16,7 @@ import (
 	"github.com/dlactin/render-diff/internal/diff"
 	"github.com/dlactin/render-diff/internal/git"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 // Package vars
@@ -109,12 +110,7 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 			localValuesPaths[i] = filepath.Join(localPath, v)
 		}
 
-		// Render Local (Feature Branch) Chart or Kustomization
-		localRender, err := diff.RenderManifests(localPath, localValuesPaths, debugFlag)
-		if err != nil {
-			return fmt.Errorf("failed to render path in local ref: %w", err)
-		}
-
+		// Setup temporary work tree for diffs
 		tempDir, cleanup, err := git.SetupWorkTree(repoRoot, fullRef)
 		if err != nil {
 			return err
@@ -130,17 +126,40 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 			targetValuesPaths[i] = filepath.Join(targetPath, v)
 		}
 
-		// Render target Ref Chart or Kustomization
-		targetRender, err := diff.RenderManifests(targetPath, targetValuesPaths, debugFlag)
-		if err != nil {
-			// If the path does not exist in the target ref
-			// We can assume it's a new addition and diff against
-			// an empty string instead.
-			if os.IsNotExist(err) {
-				targetRender = ""
-			} else {
-				return fmt.Errorf("failed to render target ref manifests: %w", err)
+		// Create localRender and targetRender outside of goroutines
+		// Create errgroup for chart/kustomization rendering
+		var localRender, targetRender string
+		g := new(errgroup.Group)
+
+		// Render local Chart or Kustomization
+		g.Go(func() error {
+			localRender, err = diff.RenderManifests(localPath, localValuesPaths, debugFlag)
+			if err != nil {
+				return fmt.Errorf("failed to render path in local ref: %w", err)
 			}
+			return nil
+		})
+
+		// Render target Ref Chart or Kustomization
+		g.Go(func() error {
+			targetRender, err = diff.RenderManifests(targetPath, targetValuesPaths, debugFlag)
+			if err != nil {
+				// If the path does not exist in the target ref
+				// We can assume it's a new addition and diff against
+				// an empty string instead.
+				if os.IsNotExist(err) {
+					targetRender = ""
+				} else {
+					return fmt.Errorf("failed to render target ref manifests: %w", err)
+				}
+			}
+			return nil
+		})
+
+		// Ensure both rendering goroutines have finished before creating our diff
+		err = g.Wait()
+		if err != nil {
+			return err
 		}
 
 		// Generate and Print Diff

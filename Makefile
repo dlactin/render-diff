@@ -2,7 +2,7 @@
 # 	Makefile
 # --------------------------------------------------------------------
 
-# Targets
+# Core Targets
 
 # Default target
 .PHONY: all
