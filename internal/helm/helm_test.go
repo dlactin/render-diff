@@ -92,4 +92,32 @@ func TestRenderChart(t *testing.T) {
 			t.Errorf("Rendered output was empty")
 		}
 	})
+
+	t.Run("Render with override values and chart dependencies", func(t *testing.T) {
+		// Using dev values file
+		valuesFile := "../../examples/helm/helloworld/values-dev.yaml"
+
+		valuesFiles := []string{valuesFile}
+		debug := false // Test the silent path
+		update := true
+
+		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update)
+		if err != nil {
+			t.Fatalf("RenderChart failed: %v", err)
+		}
+
+		// Checking for the .Values.image.tag change
+		if !strings.Contains(output, "nginx:dev") {
+			t.Errorf("Output missing expected nginx:dev. Got:\n%s", output)
+		}
+
+		// Checking for the dep configMap change
+		if !strings.Contains(output, "test-release-dep") {
+			t.Errorf("Output missing expected test-release-dep. Got:\n%s", output)
+		}
+
+		if output == "" {
+			t.Errorf("Rendered output was empty")
+		}
+	})
 }
