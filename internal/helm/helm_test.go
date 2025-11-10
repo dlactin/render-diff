@@ -46,8 +46,9 @@ func TestRenderChart(t *testing.T) {
 	t.Run("Render with default values", func(t *testing.T) {
 		valuesFiles := []string{}
 		debug := false // Test the silent path
+		update := false
 
-		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug)
+		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update)
 		if err != nil {
 			t.Fatalf("RenderChart failed: %v", err)
 		}
@@ -75,8 +76,9 @@ func TestRenderChart(t *testing.T) {
 
 		valuesFiles := []string{valuesFile}
 		debug := false // Test the silent path
+		update := false
 
-		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug)
+		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update)
 		if err != nil {
 			t.Fatalf("RenderChart failed: %v", err)
 		}
