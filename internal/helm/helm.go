@@ -38,12 +38,12 @@ func RenderChart(chartPath, releaseName string, valuesFiles []string, debug bool
 	// Run 'helm dependency build' if dependencies are present
 	if chart.Metadata.Dependencies != nil {
 		if debug {
-			log.Printf("Chart has dependencies, running 'helm dependency build' for: %s", chartPath)
+			log.Printf("Chart has dependencies, running 'helm dependency build' for: %s\n", chartPath)
 		}
 
 		if inflatedSubCharts(chartPath) {
 			logMutex.Lock()
-			log.Printf("Warning: inflated subcharts found in %s/charts.", chartPath)
+			log.Printf("Warning: inflated subcharts present in %s/charts — dependency updates may be skipped or inconsistent.", chartPath)
 			logMutex.Unlock()
 		}
 
@@ -65,7 +65,6 @@ func RenderChart(chartPath, releaseName string, valuesFiles []string, debug bool
 		// Only used if the -u flag is passed.
 		if update {
 			err = silentRun(debug, func() error {
-				fmt.Println("Updated dependencies")
 				return man.Update()
 			})
 			if err != nil {
@@ -170,7 +169,15 @@ func loadValues(valuesFiles []string) (chartutil.Values, error) {
 
 // IsHelmChart will try to load the path as a Helm Chart, if it fails we'll return false
 func IsHelmChart(path string) bool {
-	_, err := loadChart(path, false)
+	// Check if a Chart.yaml exists before trying to load the chart
+	// This fails faster than trying to load a full chart.
+	chartYaml := filepath.Join(path, "Chart.yaml")
+	_, err := os.Stat(chartYaml)
+	if err != nil {
+		return false
+	}
+
+	_, err = loadChart(path, false)
 
 	return err == nil
 }
@@ -221,7 +228,12 @@ func inflatedSubCharts(chartPath string) bool {
 
 	for _, subChart := range subCharts {
 		if subChart.IsDir() {
-			return true
+			subChartPath := filepath.Join(chartPath, "charts", subChart.Name())
+			if IsHelmChart(subChartPath) {
+				return true
+			} else {
+				return false
+			}
 		}
 	}
 	return false
