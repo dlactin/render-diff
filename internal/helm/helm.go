@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 
+	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -20,18 +21,25 @@ import (
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/engine"
 	"helm.sh/helm/v3/pkg/getter"
+	"helm.sh/helm/v3/pkg/lint/support"
 )
 
 var logMutex sync.Mutex
 
 // renderChart loads, merges values, and renders a Helm chart
-func RenderChart(chartPath, releaseName string, valuesFiles []string, debug bool, update bool) (string, error) {
+func RenderChart(chartPath, releaseName string, valuesFiles []string, debug bool, update bool, lint bool) (string, error) {
 	chart, err := loadChart(chartPath, debug)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", err
 		}
 		return "", fmt.Errorf("failed to load chart from %s: %w", chartPath, err)
+	}
+
+	// Load additional values files from the --values flags
+	userValues, err := loadValues(valuesFiles)
+	if err != nil {
+		return "", fmt.Errorf("failed to load/merge values: %w", err)
 	}
 
 	// Helm Dependency Build
@@ -72,6 +80,15 @@ func RenderChart(chartPath, releaseName string, valuesFiles []string, debug bool
 			}
 		}
 
+		// Include Helm linting by default, after trying to load the chart, values files
+		// and any dependencies.
+		if lint {
+			err = lintChart(chartPath, userValues, debug)
+			if err != nil {
+				return "", fmt.Errorf("failed to run helm lint: %w", err)
+			}
+		}
+
 		// Run build. This downloads charts into the 'charts/' directory.
 		// We are ignoring some log output here, which can be reverted with the --debug flag
 		err = silentRun(debug, func() error {
@@ -87,12 +104,6 @@ func RenderChart(chartPath, releaseName string, valuesFiles []string, debug bool
 		if err != nil {
 			return "", fmt.Errorf("failed to reload chart after dependency build: %w", err)
 		}
-	}
-
-	// Load additional values files from the --values flags
-	userValues, err := loadValues(valuesFiles)
-	if err != nil {
-		return "", fmt.Errorf("failed to load/merge values: %w", err)
 	}
 
 	// Define release options for the render
@@ -237,4 +248,52 @@ func inflatedSubCharts(chartPath string) bool {
 		}
 	}
 	return false
+}
+
+// Run Helm lint against our chart path with any included values files
+func lintChart(chartPath string, userValues chartutil.Values, debug bool) error {
+	actionConfig := new(action.Configuration)
+
+	settings := cli.New()
+	err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), "memory", log.Printf)
+	if err != nil {
+		return fmt.Errorf("failed to initialize Helm action config: %s", err)
+	}
+
+	lintClient := action.NewLint()
+
+	// We want to include subcharts if any are present
+	lintClient.WithSubcharts = true
+
+	lintResults := lintClient.Run([]string{chartPath}, userValues)
+	if lintResults == nil {
+		return fmt.Errorf("linting failed, but no result object was returned")
+	}
+
+	// We only really want to display warning and error messages by default
+	// We can extend this via a flag if desired.
+	// InfoSev = 1, WarningSev = 2, ErrorSev = 3
+	lintSev := map[int]string{1: "info", 2: "warn", 3: "error"}
+
+	if len(lintResults.Messages) > 0 {
+		if debug {
+			fmt.Printf("Linting results for chart at '%s':\n", chartPath)
+		}
+		for _, msg := range lintResults.Messages {
+			// Print all severity messages if debug is enabled
+			if debug {
+				fmt.Printf("[%s] %s: %s\n", lintSev[msg.Severity], msg.Path, msg.Err)
+			} else {
+				if msg.Severity >= support.WarningSev {
+					fmt.Printf("[%s] %s: %s\n", lintSev[msg.Severity], msg.Path, msg.Err)
+				}
+			}
+		}
+
+	} else {
+		if debug {
+			fmt.Printf("Lint OK: All checks passed for chart at '%s'\n", chartPath)
+		}
+	}
+	return nil
 }

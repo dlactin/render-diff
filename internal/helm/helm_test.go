@@ -47,8 +47,9 @@ func TestRenderChart(t *testing.T) {
 		valuesFiles := []string{}
 		debug := false // Test the silent path
 		update := false
+		lint := true
 
-		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update)
+		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update, lint)
 		if err != nil {
 			t.Fatalf("RenderChart failed: %v", err)
 		}
@@ -77,8 +78,9 @@ func TestRenderChart(t *testing.T) {
 		valuesFiles := []string{valuesFile}
 		debug := false // Test the silent path
 		update := false
+		lint := true
 
-		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update)
+		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update, lint)
 		if err != nil {
 			t.Fatalf("RenderChart failed: %v", err)
 		}
@@ -98,10 +100,11 @@ func TestRenderChart(t *testing.T) {
 		valuesFile := "../../examples/helm/helloworld/values-dev.yaml"
 
 		valuesFiles := []string{valuesFile}
-		debug := false // Test the silent path
+		debug := true // Test the silent path
 		update := true
+		lint := true
 
-		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update)
+		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update, lint)
 		if err != nil {
 			t.Fatalf("RenderChart failed: %v", err)
 		}

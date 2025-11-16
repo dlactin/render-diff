@@ -132,9 +132,10 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 		var localRender, targetRender string
 		g := new(errgroup.Group)
 
+		// We only lint our local version
 		// Render local Chart or Kustomization
 		g.Go(func() error {
-			localRender, err = diff.RenderManifests(localPath, localValuesPaths, debugFlag, updateFlag)
+			localRender, err = diff.RenderManifests(localPath, localValuesPaths, debugFlag, updateFlag, true)
 			if err != nil {
 				return fmt.Errorf("failed to render path in local ref: %w", err)
 			}
@@ -143,7 +144,7 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 
 		// Render target Ref Chart or Kustomization
 		g.Go(func() error {
-			targetRender, err = diff.RenderManifests(targetPath, targetValuesPaths, debugFlag, updateFlag)
+			targetRender, err = diff.RenderManifests(targetPath, targetValuesPaths, debugFlag, updateFlag, false)
 			if err != nil {
 				// If the path does not exist in the target ref
 				// We can assume it's a new addition and diff against
@@ -197,7 +198,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&renderPathFlag, "path", "p", ".", "Relative path to the chart or kustomization directory")
 	rootCmd.PersistentFlags().StringVarP(&gitRefFlag, "ref", "r", "main", "Target Git ref to compare against. Will try to find its remote-tracking branch (e.g., origin/main)")
 	rootCmd.PersistentFlags().StringSliceVarP(&valuesFlag, "values", "f", []string{}, "Path to an additional values file (can be specified multiple times)")
-	rootCmd.PersistentFlags().BoolVarP(&updateFlag, "update", "u", false, "Update helm chart dependencies. Required if lockfile does not match dependencies")
+	rootCmd.PersistentFlags().BoolVarP(&updateFlag, "update", "u", false, "Update Helm chart dependencies. Required if lockfile does not match dependencies")
 	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "Enable verbose logging for debugging")
 
 	rootCmd.Flags().SortFlags = false
