@@ -83,7 +83,8 @@ func RenderChart(chartPath, releaseName string, valuesFiles []string, debug bool
 		// Include Helm linting by default, after trying to load the chart, values files
 		// and any dependencies.
 		if lint {
-			lintChart(chartPath, userValues, debug)
+			err = lintChart(chartPath, userValues, debug)
+			return "", fmt.Errorf("failed to run helm lint: %w", err)
 		}
 
 		// Run build. This downloads charts into the 'charts/' directory.
@@ -254,7 +255,7 @@ func lintChart(chartPath string, userValues chartutil.Values, debug bool) error 
 	settings := cli.New()
 	err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), "memory", log.Printf)
 	if err != nil {
-		return fmt.Errorf("Failed to initialize Helm action config: %s", err)
+		return fmt.Errorf("failed to initialize Helm action config: %s", err)
 	}
 
 	lintClient := action.NewLint()
@@ -263,7 +264,7 @@ func lintChart(chartPath string, userValues chartutil.Values, debug bool) error 
 
 	lintResults := lintClient.Run([]string{chartPath}, userValues)
 	if lintResults == nil {
-		return fmt.Errorf("Linting failed, but no result object was returned")
+		return fmt.Errorf("linting failed, but no result object was returned")
 	}
 
 	// We only really want to display warning and error messages by default
