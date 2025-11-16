@@ -84,7 +84,9 @@ func RenderChart(chartPath, releaseName string, valuesFiles []string, debug bool
 		// and any dependencies.
 		if lint {
 			err = lintChart(chartPath, userValues, debug)
-			return "", fmt.Errorf("failed to run helm lint: %w", err)
+			if err != nil {
+				return "", fmt.Errorf("failed to run helm lint: %w", err)
+			}
 		}
 
 		// Run build. This downloads charts into the 'charts/' directory.
@@ -287,6 +289,7 @@ func lintChart(chartPath string, userValues chartutil.Values, debug bool) error 
 				}
 			}
 		}
+
 	} else {
 		if debug {
 			fmt.Printf("Lint OK: All checks passed for chart at '%s'\n", chartPath)
