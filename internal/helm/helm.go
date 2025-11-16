@@ -260,6 +260,7 @@ func lintChart(chartPath string, userValues chartutil.Values, debug bool) error 
 
 	lintClient := action.NewLint()
 
+	// We want to include subcharts if any are present
 	lintClient.WithSubcharts = true
 
 	lintResults := lintClient.Run([]string{chartPath}, userValues)
