@@ -8,10 +8,10 @@
 .PHONY: all
 all: build
 
-# Build render-diff
+# Build rdv (render-diff-validate)
 .PHONY: build
 build:
-	go build -o $(LOCALBIN)/render-diff
+	go build -o $(LOCALBIN)/rdv
 
 # Run golangci-lint
 .PHONY: lint
