@@ -48,7 +48,7 @@ func TestRenderChart(t *testing.T) {
 		debug := false // Test the silent path
 		update := false
 
-		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update)
+		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update, true)
 		if err != nil {
 			t.Fatalf("RenderChart failed: %v", err)
 		}
@@ -78,7 +78,7 @@ func TestRenderChart(t *testing.T) {
 		debug := false // Test the silent path
 		update := false
 
-		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update)
+		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update, true)
 		if err != nil {
 			t.Fatalf("RenderChart failed: %v", err)
 		}
@@ -101,7 +101,7 @@ func TestRenderChart(t *testing.T) {
 		debug := false // Test the silent path
 		update := true
 
-		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update)
+		output, err := RenderChart(chartPath, releaseName, valuesFiles, debug, update, true)
 		if err != nil {
 			t.Fatalf("RenderChart failed: %v", err)
 		}
