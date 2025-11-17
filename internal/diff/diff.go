@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/dlactin/render-diff/internal/helm"
-	"github.com/dlactin/render-diff/internal/kustomize"
+	"github.com/dlactin/rdv/internal/helm"
+	"github.com/dlactin/rdv/internal/kustomize"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"

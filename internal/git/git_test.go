@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dlactin/render-diff/internal/diff"
+	"github.com/dlactin/rdv/internal/diff"
 )
 
 func TestSetupWorkTree(t *testing.T) {

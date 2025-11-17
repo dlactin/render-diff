@@ -1,7 +1,8 @@
-# Render-Diff
-`render-diff` provides a fast and local preview of your rendered Kubernetes manifest changes.
+# rdv (render-diff-validate)
+`rdv` provides a fast and local preview of your rendered Kubernetes manifest changes.
 
-It renders your local Helm chart or Kustomize overlay to compare the resulting manifests against the version in a target git ref (like 'main' or 'develop').
+It renders your local Helm chart or Kustomize overlay, validates rendered manifests via kubeconform and then compares the resulting manifests against the version in a target git ref (like 'main' or 'develop').
+
 It prints a colored diff of the final rendered YAML.
 
 ## Requirements
@@ -11,10 +12,10 @@ It prints a colored diff of the final rendered YAML.
 
 ## Installation
 
-You can install `render-diff` directly using `go install`:
+You can install `rdv` directly using `go install`:
 
 ```sh
-go install github.com/dlactin/render-diff@latest
+go install github.com/dlactin/rdv@latest
 ```
 
 # Flags
@@ -26,6 +27,7 @@ go install github.com/dlactin/render-diff@latest
 | `--values` | `-f` | Path to an additional values file (can be specified multiple times). | `[]` |
 | `--update` | `-u` | Update helm chart dependencies. Required if lockfile does not match dependencies | `false` |
 | `--debug` | `-d` | Enable verbose logging for debugging | `false` |
+| `--validate` | `-v` | Validate rendered manifests with kubeconform | `false` |
 | `--version` | | Prints the application version. | |
 | `--help` | `-h` | Show help information. | |
 
@@ -34,8 +36,11 @@ go install github.com/dlactin/render-diff@latest
 ### This must be run while your current directory is within your git repository
 
 #### Checking a Helm Chart diff against another target ref
-* ```render-diff -p ./examples/helm/helloworld -f values-dev.yaml -r development```
+* ```rdv -p ./examples/helm/helloworld -f values-dev.yaml -r development```
+#### Checking a Helm Chart diff and validating our rendered manifests
+* ```rdv -p ./examples/helm/helloworld --validate```
 #### Checking Kustomize diff against the default (`main`) branch
-* ```render-diff -p ./examples/kustomize/helloworld```
+* ```rdv -p ./examples/kustomize/helloworld```
 #### Checking Kustomize diff against a tag
-* ```render-diff -p ./examples/kustomize/helloworld -r tags/v0.5.1```
+* ```rdv -p ./examples/kustomize/helloworld -r tags/v0.5.1```
+
