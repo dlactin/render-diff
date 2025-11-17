@@ -40,14 +40,15 @@ func ValidateManifests(manifest string, debug bool) error {
 		// We want to know which resource failed validation
 		resourceID := buildResourceID(i+1, &res.Resource)
 
-		if res.Status == validator.Invalid {
+		switch res.Status {
+		case validator.Invalid:
 			validationFailed = true
 			errs.WriteString(fmt.Sprintf(
 				"  - %s is invalid:\n      %s\n",
 				resourceID,
 				res.Err,
 			))
-		} else if res.Status == validator.Error {
+		case validator.Error:
 			validationFailed = true
 			errs.WriteString(fmt.Sprintf(
 				"  - Error processing %s:\n      %s\n",
