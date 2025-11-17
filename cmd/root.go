@@ -1,4 +1,4 @@
-// Package cmd implements the command-line interface for render-diff
+// Package cmd implements the command-line interface for rdv
 // using the Cobra library.
 package cmd
 
@@ -13,8 +13,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/dlactin/render-diff/internal/diff"
-	"github.com/dlactin/render-diff/internal/git"
+	"github.com/dlactin/rdv/internal/diff"
+	"github.com/dlactin/rdv/internal/git"
+	"github.com/dlactin/rdv/internal/validate"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )
@@ -27,6 +28,7 @@ var (
 	gitRefFlag     string
 	updateFlag     bool
 	debugFlag      bool
+	validateFlag   bool
 
 	repoRoot string
 	fullRef  string
@@ -34,11 +36,11 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "render-diff",
-	Short: "A CLI tool to render Helm/Kustomize and diff manifests between a local revision and target ref.",
-	Long: `render-diff provides a fast and local preview of your Kubernetes manifest changes.
+	Use:   "rdv",
+	Short: "A CLI tool to render Helm/Kustomize, validate and print the diff of manifests between a local revision and target ref.",
+	Long: `rdv provides a fast and local preview of your Kubernetes manifest changes. With basic Helm linting and Manifest validation.
 
-It renders your local Helm chart or Kustomize overlay to compare the resulting manifests against the version in a target git ref (like 'main' or 'develop'). It prints a colored diff of the final rendered YAML.`,
+It renders your local Helm chart or Kustomize overlay, validates rendered manifests via kubeconform and then compares the resulting manifests against the version in a target git ref (like 'main' or 'develop'). It prints a colored diff of the final rendered YAML.`,
 	Version: getVersion(),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		log.SetFlags(0) // Disabling timestamps for log output
@@ -72,7 +74,7 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 			}
 		}
 
-		// Validate
+		// Validate our git ref exists
 		validateRef := exec.Command("git", "rev-parse", "--verify", "--quiet", fullRef)
 		validateRef.Dir = repoRoot
 
@@ -139,6 +141,14 @@ It renders your local Helm chart or Kustomize overlay to compare the resulting m
 			if err != nil {
 				return fmt.Errorf("failed to render path in local ref: %w", err)
 			}
+
+			// Run local rendered manifests through kubeconform if --validate flag is passed
+			if validateFlag {
+				err = validate.ValidateManifests(localRender, debugFlag)
+				if err != nil {
+					return err
+				}
+			}
 			return nil
 		})
 
@@ -199,6 +209,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&gitRefFlag, "ref", "r", "main", "Target Git ref to compare against. Will try to find its remote-tracking branch (e.g., origin/main)")
 	rootCmd.PersistentFlags().StringSliceVarP(&valuesFlag, "values", "f", []string{}, "Path to an additional values file (can be specified multiple times)")
 	rootCmd.PersistentFlags().BoolVarP(&updateFlag, "update", "u", false, "Update Helm chart dependencies. Required if lockfile does not match dependencies")
+	rootCmd.PersistentFlags().BoolVarP(&validateFlag, "validate", "v", false, "Validate rendered manifests with kubeconform")
 	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "Enable verbose logging for debugging")
 
 	rootCmd.Flags().SortFlags = false
