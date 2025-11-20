@@ -26,6 +26,7 @@ go install github.com/dlactin/rdv@latest
 | `--ref` | `-r` | Target Git ref to compare against. Will try to find its remote-tracking branch (e.g., origin/main). | `main` |
 | `--values` | `-f` | Path to an additional values file (can be specified multiple times). | `[]` |
 | `--update` | `-u` | Update helm chart dependencies. Required if lockfile does not match dependencies | `false` |
+| `--semantic` | `-s` |  Enable semantic diffing of k8s manifests (using dyff) | `false` |
 | `--debug` | `-d` | Enable verbose logging for debugging | `false` |
 | `--validate` | `-v` | Validate rendered manifests with kubeconform | `false` |
 | `--version` | | Prints the application version. | |
