@@ -3,10 +3,13 @@ module github.com/dlactin/rdv
 go 1.24.0
 
 require (
+	github.com/gonvenience/ytbx v1.4.7
 	github.com/hexops/gotextdiff v1.0.3
+	github.com/homeport/dyff v1.10.2
 	github.com/spf13/cobra v1.10.1
 	github.com/yannh/kubeconform v0.7.0
 	golang.org/x/sync v0.18.0
+	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.19.0
 	sigs.k8s.io/kustomize/api v0.21.0
 	sigs.k8s.io/kustomize/kyaml v0.21.0
@@ -37,12 +40,17 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/gonvenience/bunt v1.4.2 // indirect
+	github.com/gonvenience/idem v0.0.2 // indirect
+	github.com/gonvenience/neat v1.3.16 // indirect
+	github.com/gonvenience/term v1.0.4 // indirect
+	github.com/gonvenience/text v1.0.9 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
@@ -64,12 +72,16 @@ require (
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mattn/go-ciede2000 v0.0.0-20170301095244-782e8c62fec3 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
+	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
+	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/spdystream v0.5.0 // indirect
 	github.com/moby/term v0.5.2 // indirect
@@ -86,10 +98,13 @@ require (
 	github.com/rubenv/sql-migrate v1.8.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
+	github.com/texttheater/golang-levenshtein v1.0.1 // indirect
+	github.com/virtuald/go-ordered-json v0.0.0-20170621173500-b18e6e673d74 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
@@ -106,7 +121,7 @@ require (
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/api v0.34.0 // indirect
 	k8s.io/apiextensions-apiserver v0.34.0 // indirect
 	k8s.io/apimachinery v0.34.0 // indirect

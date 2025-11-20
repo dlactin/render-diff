@@ -4,10 +4,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dlactin/rdv/internal/git"
 )
 
 func TestGetRepoRoot(t *testing.T) {
-	path, err := GetRepoRoot()
+	path, err := git.GetRepoRoot()
 	if err != nil {
 		t.Fatalf("GetRepoRoot() failed: %v", err)
 	}
