@@ -6,10 +6,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func SetupWorkTree(repoRoot, gitRef string) (string, func(), error) {
-
 	// Fetch from all remotes
 	fetchCmd := exec.Command("git", "fetch", "--all")
 	fetchCmd.Dir = repoRoot
@@ -46,4 +46,14 @@ func SetupWorkTree(repoRoot, gitRef string) (string, func(), error) {
 	}
 
 	return tempDir, cleanup, nil
+}
+
+// GetRepoRoot finds the top-level directory of the current git repository.
+func GetRepoRoot() (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to find git repo root: %w. Make sure you are running this inside a git repository. Output: %s", err, string(output))
+	}
+	return strings.TrimSpace(string(output)), nil
 }

@@ -3,14 +3,17 @@ package diff
 
 import (
 	"fmt"
-	"os/exec"
+	"io"
 	"strings"
 
 	"github.com/dlactin/rdv/internal/helm"
 	"github.com/dlactin/rdv/internal/kustomize"
+	"github.com/gonvenience/ytbx"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
+	"github.com/homeport/dyff/pkg/dyff"
+	"gopkg.in/yaml.v3"
 )
 
 // ANSI codes for diff colors
@@ -20,16 +23,6 @@ const (
 	colorCyan  = "\033[36m"
 	colorReset = "\033[0m"
 )
-
-// GetRepoRoot finds the top-level directory of the current git repository.
-func GetRepoRoot() (string, error) {
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("failed to find git repo root: %w. Make sure you are running this inside a git repository. Output: %s", err, string(output))
-	}
-	return strings.TrimSpace(string(output)), nil
-}
 
 // RenderManifests will render a Helm Chart or build a Kustomization
 // and return the rendered manifests as a string
@@ -88,4 +81,62 @@ func ColorizeDiff(diff string) string {
 	}
 
 	return coloredDiff.String()
+}
+
+// This is more complex but k8s object aware diff engine
+// it is better suited for larger scale changes to a k8s resources
+func CreateSemanticDiff(targetRender, localRender, fromName, toName string) (*dyff.HumanReport, error) {
+
+	localRenderFile, err := createInputFileFromString(localRender, toName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse local render for semantic diff: %w", err)
+	}
+
+	targetRenderFile, err := createInputFileFromString(targetRender, fromName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse target render for semantic diff: %w", err)
+	}
+
+	options := []dyff.CompareOption{
+		dyff.IgnoreOrderChanges(true),
+		dyff.KubernetesEntityDetection(true),
+		dyff.DetectRenames(true),
+		dyff.IgnoreWhitespaceChanges(true),
+	}
+
+	diff, err := dyff.CompareInputFiles(targetRenderFile, localRenderFile, options...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compare manifests: %w", err)
+	}
+
+	// Create our human readable report from our diffs
+	report := dyff.HumanReport{
+		Report:          diff,
+		OmitHeader:      true,
+		UseGoPatchPaths: true,
+	}
+
+	return &report, nil
+}
+
+// createInputFileFromString parses a multi-document YAML string into a dyff compatible InputFile format
+func createInputFileFromString(content string, location string) (ytbx.InputFile, error) {
+	var docs []*yaml.Node
+	decoder := yaml.NewDecoder(strings.NewReader(content))
+
+	for {
+		var node yaml.Node
+		if err := decoder.Decode(&node); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return ytbx.InputFile{}, fmt.Errorf("failed to decode YAML from %s: %w", location, err)
+		}
+		docs = append(docs, &node)
+	}
+
+	return ytbx.InputFile{
+		Location:  location,
+		Documents: docs,
+	}, nil
 }
