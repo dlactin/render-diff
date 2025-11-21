@@ -17,6 +17,7 @@ import (
 	"github.com/dlactin/rdv/internal/git"
 	"github.com/dlactin/rdv/internal/validate"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -30,6 +31,7 @@ var (
 	debugFlag        bool
 	validateFlag     bool
 	semanticDiffFlag bool
+	plainFlag        bool
 
 	repoRoot string
 	fullRef  string
@@ -41,7 +43,8 @@ var rootCmd = &cobra.Command{
 	Short: "A CLI tool to render Helm/Kustomize, validate and print the diff of manifests between a local revision and target ref.",
 	Long: `rdv provides a fast and local preview of your Kubernetes manifest changes. With basic Helm linting and Manifest validation.
 
-It renders your local Helm chart or Kustomize overlay, validates rendered manifests via kubeconform and then compares the resulting manifests against the version in a target git ref (like 'main' or 'develop'). It prints a colored diff of the final rendered YAML.`,
+It renders your local Helm charts or Kustomize overlays, validates the output against Kubernetes schemas (via kubeconform),
+and generates a colored diff comparing your local changes against a target Git reference (e.g., 'main').`,
 	Version: getVersion(),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		log.SetFlags(0) // Disabling timestamps for log output
@@ -177,7 +180,7 @@ It renders your local Helm chart or Kustomize overlay, validates rendered manife
 
 		if semanticDiffFlag {
 			// We are using a more complex diff engine (dyff) which is better suited for k8s manifest comparison
-			renderedDiff, err := diff.CreateSemanticDiff(targetRender, localRender, fmt.Sprintf("%s/%s", fullRef, relativePath), fmt.Sprintf("local/%s", relativePath))
+			renderedDiff, err := diff.CreateSemanticDiff(targetRender, localRender, fmt.Sprintf("%s/%s", fullRef, relativePath), fmt.Sprintf("local/%s", relativePath), plainFlag)
 			if err != nil {
 				return fmt.Errorf("error creating dyff: %w", err)
 			}
@@ -201,7 +204,7 @@ It renders your local Helm chart or Kustomize overlay, validates rendered manife
 				fmt.Println("\nNo differences found between rendered manifests.")
 			} else {
 				fmt.Printf("\n--- Diff (%s vs. local) ---\n", fullRef)
-				fmt.Println(diff.ColorizeDiff(renderedDiff))
+				fmt.Println(diff.ColorizeDiff(renderedDiff, plainFlag))
 
 			}
 		}
@@ -225,14 +228,79 @@ func Execute() {
 
 // Initializes our RootCmd with the flags below.
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&renderPathFlag, "path", "p", ".", "Relative path to the chart or kustomization directory")
-	rootCmd.PersistentFlags().StringVarP(&gitRefFlag, "ref", "r", "main", "Target Git ref to compare against. Will try to find its remote-tracking branch (e.g., origin/main)")
-	rootCmd.PersistentFlags().StringSliceVarP(&valuesFlag, "values", "f", []string{}, "Path to an additional values file (can be specified multiple times)")
-	rootCmd.PersistentFlags().BoolVarP(&updateFlag, "update", "u", false, "Update Helm chart dependencies. Required if lockfile does not match dependencies")
-	rootCmd.PersistentFlags().BoolVarP(&semanticDiffFlag, "semantic", "s", false, "Enable semantic diffing of k8s manifests (using dyff)")
-	rootCmd.PersistentFlags().BoolVarP(&validateFlag, "validate", "v", false, "Validate rendered manifests with kubeconform")
-	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "Enable verbose logging for debugging")
+	// Core flags
+	coreFlags := pflag.NewFlagSet("generic", pflag.ContinueOnError)
+	coreFlags.SortFlags = false
 
-	rootCmd.Flags().SortFlags = false
-	rootCmd.PersistentFlags().SortFlags = false
+	coreFlags.StringVarP(&renderPathFlag, "path", "p", ".", "Relative path to the chart or kustomization directory")
+	coreFlags.StringVarP(&gitRefFlag, "ref", "r", "main", "Target Git ref to compare against. Will try to find its remote-tracking branch (e.g., origin/main)")
+	coreFlags.BoolVarP(&validateFlag, "validate", "v", false, "Validate rendered manifests with kubeconform")
+
+	// Helm flags
+	helmFlags := pflag.NewFlagSet("helm", pflag.ContinueOnError)
+	helmFlags.SortFlags = false
+
+	helmFlags.StringSliceVarP(&valuesFlag, "values", "f", []string{}, "Path to an additional values file (can be specified multiple times)")
+	helmFlags.BoolVarP(&updateFlag, "update", "u", false, "Update Helm chart dependencies. Required if lockfile does not match dependencies")
+
+	// Output flags
+	outputFlags := pflag.NewFlagSet("output", pflag.ContinueOnError)
+	outputFlags.SortFlags = false
+
+	outputFlags.BoolVarP(&semanticDiffFlag, "semantic", "s", false, "Enable semantic diffing of k8s manifests (using dyff)")
+	outputFlags.BoolVarP(&plainFlag, "plain", "", false, "Output in plain style without any highlighting")
+	outputFlags.BoolVarP(&debugFlag, "debug", "", false, "Enable verbose logging for debugging")
+
+	// Add our custom flagsets to our rootCMD
+	rootCmd.Flags().AddFlagSet(coreFlags)
+	rootCmd.Flags().AddFlagSet(helmFlags)
+	rootCmd.Flags().AddFlagSet(outputFlags)
+
+	// Clean up the help message to print our flag sets
+	rootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
+		out := cmd.OutOrStdout()
+
+		// Check for the auto-generated version flag
+		if vFlag := cmd.Flags().Lookup("version"); vFlag != nil {
+			if outputFlags.Lookup("version") == nil {
+				outputFlags.AddFlag(vFlag)
+			}
+		}
+		// Check for the auto-generated help flag
+		if hFlag := cmd.Flags().Lookup("help"); hFlag != nil {
+			if outputFlags.Lookup("help") == nil {
+				outputFlags.AddFlag(hFlag)
+			}
+		}
+
+		// Print the standard Usage header
+		_, err := fmt.Fprintf(out, "Usage:\n  %s [flags]\n", cmd.Use)
+		if err != nil {
+			return err
+		}
+
+		// Print global flags
+		_, _ = fmt.Fprintf(out, "\nCore Flags:\n")
+		_, err = fmt.Fprint(out, coreFlags.FlagUsages())
+		if err != nil {
+			return err
+		}
+
+		// Print Helm flags
+		_, _ = fmt.Fprintf(out, "\nHelm Flags:\n")
+		_, err = fmt.Fprint(out, helmFlags.FlagUsages())
+		if err != nil {
+			return err
+		}
+
+		// Print output flags
+		_, _ = fmt.Fprintf(out, "\nOutput Flags:\n")
+		_, err = fmt.Fprint(out, outputFlags.FlagUsages())
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 }
