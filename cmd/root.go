@@ -254,6 +254,7 @@ func init() {
 	// Add our custom flagsets to our rootCMD
 	rootCmd.Flags().AddFlagSet(coreFlags)
 	rootCmd.Flags().AddFlagSet(helmFlags)
+	rootCmd.Flags().AddFlagSet(outputFlags)
 
 	// Clean up the help message to print our flag sets
 	rootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
