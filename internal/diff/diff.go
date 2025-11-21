@@ -8,6 +8,7 @@ import (
 
 	"github.com/dlactin/rdv/internal/helm"
 	"github.com/dlactin/rdv/internal/kustomize"
+	"github.com/gonvenience/bunt"
 	"github.com/gonvenience/ytbx"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
@@ -56,9 +57,10 @@ func CreateDiff(a, b string, fromName, toName string) string {
 }
 
 // colorizeDiff adds simple ANSI colors to a diff string.
-// We want to see this output in a terminal or as a comment on a PR
-// Fast readability is important
-func ColorizeDiff(diff string) string {
+func ColorizeDiff(diff string, plain bool) string {
+	if plain {
+		return diff
+	}
 	var coloredDiff strings.Builder
 	lines := strings.Split(diff, "\n")
 
@@ -85,7 +87,11 @@ func ColorizeDiff(diff string) string {
 
 // This is more complex but k8s object aware diff engine
 // it is better suited for larger scale changes to a k8s resources
-func CreateSemanticDiff(targetRender, localRender, fromName, toName string) (*dyff.HumanReport, error) {
+func CreateSemanticDiff(targetRender, localRender, fromName, toName string, plain bool) (*dyff.HumanReport, error) {
+	// dyff is using bunt for text colouring
+	if plain {
+		bunt.SetColorSettings(bunt.OFF, bunt.OFF)
+	}
 
 	localRenderFile, err := createInputFileFromString(localRender, toName)
 	if err != nil {
