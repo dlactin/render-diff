@@ -32,6 +32,7 @@ var (
 	validateFlag     bool
 	semanticDiffFlag bool
 	plainFlag        bool
+	outputPathFlag   string
 
 	repoRoot string
 	fullRef  string
@@ -208,6 +209,32 @@ and generates a colored diff comparing your local changes against a target Git r
 
 			}
 		}
+
+		// Output rendered manifests to local files for other comparisons
+		if outputPathFlag != "" {
+			dir := filepath.Dir(outputPathFlag)
+			if dir != "." {
+				if err := os.MkdirAll(dir, 0755); err != nil {
+					return fmt.Errorf("failed to create output directory: %w", err)
+				}
+			}
+
+			// We are having static local/target file names for the render
+			localRenderFile := filepath.Join(outputPathFlag, "local.yaml")
+			err = os.WriteFile(localRenderFile, []byte(localRender), 0644)
+			if err != nil {
+				return fmt.Errorf("failed to write output file to %s: %w", outputPathFlag, err)
+			}
+
+			targetRenderFile := filepath.Join(outputPathFlag, "target.yaml")
+			err = os.WriteFile(targetRenderFile, []byte(targetRender), 0644)
+			if err != nil {
+				return fmt.Errorf("failed to write output file to %s: %w", outputPathFlag, err)
+			}
+
+			fmt.Printf("Rendered manifest saved to: %s\n", outputPathFlag)
+		}
+
 		return nil
 	},
 }
@@ -248,6 +275,7 @@ func init() {
 	outputFlags.SortFlags = false
 
 	outputFlags.BoolVarP(&semanticDiffFlag, "semantic", "s", false, "Enable semantic diffing of k8s manifests (using dyff)")
+	outputFlags.StringVarP(&outputPathFlag, "output", "o", "", "Write the local and target rendered manifests to a specific file path")
 	outputFlags.BoolVarP(&plainFlag, "plain", "", false, "Output in plain style without any highlighting")
 	outputFlags.BoolVarP(&debugFlag, "debug", "", false, "Enable verbose logging for debugging")
 
