@@ -29,6 +29,7 @@ go install github.com/dlactin/rdv@latest
 | `--semantic` | `-s` |  Enable semantic diffing of k8s manifests (using dyff) | `false` |
 | `--debug` | `-d` | Enable verbose logging for debugging | `false` |
 | `--validate` | `-v` | Validate rendered manifests with kubeconform | `false` |
+| `--output` | `-o` | Write the local and target rendered manifests to a specific file path | `false` |
 | `--version` | | Prints the application version. | |
 | `--help` | `-h` | Show help information. | |
 
